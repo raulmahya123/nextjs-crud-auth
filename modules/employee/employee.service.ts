@@ -107,21 +107,32 @@ export class EmployeeService {
     };
   }
 
-  static async delete(id: string): Promise<ServiceResponse<any>> {
-    if (!id) {
-      return {
-        success: false,
-        status: 400,
-        message: "Employee id is required",
-      };
-    }
-
-    await EmployeeRepository.delete(id);
-
+static async delete(id: string): Promise<ServiceResponse<any>> {
+  if (!id) {
     return {
-      success: true,
-      status: 200,
-      data: true,
+      success: false,
+      status: 400,
+      message: "Employee id is required",
     };
   }
+
+  // ✅ CEK DULU ADA ATAU TIDAK
+  const exists = await EmployeeRepository.findById(id);
+  if (!exists) {
+    return {
+      success: false,
+      status: 404,
+      message: "Employee not found",
+    };
+  }
+
+  await EmployeeRepository.delete(id);
+
+  return {
+    success: true,
+    status: 200,
+    data: { message: "Employee deleted successfully" },
+  };
+}
+
 }
