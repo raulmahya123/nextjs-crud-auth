@@ -1,25 +1,56 @@
+import { EmployeeService } from "@/modules/employee/employee.service";
+import { success, error } from "@/app/lib/response";
 import { writeFile } from "fs/promises";
 import path from "path";
-import { withAuth } from "@/app/lib/auth-middleware";
-import { success, error } from "@/app/lib/response";
 
-async function handlePOST(req: Request) {
-  const formData = await req.formData();
-  const file = formData.get("photo") as File;
+export async function POST(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
 
-  if (!file) return error("No file uploaded", 400);
+    const formData = await req.formData();
+    const file = formData.get("photo") as File | null;
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+    if (!file) {
+      return error("Photo is required", 400);
+    }
 
-  const fileName = `${Date.now()}-${file.name}`;
-  const filePath = path.join(process.cwd(), "public/uploads", fileName);
+    // ✅ VALIDASI FILE
+    if (!file.type.startsWith("image/")) {
+      return error("Only image files are allowed", 400);
+    }
 
-  await writeFile(filePath, buffer);
+    // ✅ NAMA FILE UNIK
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-  return success({
-    url: `/uploads/${fileName}`,
-  });
+    const fileName = `${id}-${Date.now()}-${file.name}`;
+    const uploadDir = path.join(
+      process.cwd(),
+      "public/uploads/employees"
+    );
+    const filePath = path.join(uploadDir, fileName);
+
+    await writeFile(filePath, buffer);
+
+    // ✅ SIMPAN URL KE DB
+    const photoUrl = `/uploads/employees/${fileName}`;
+    const result = await EmployeeService.update(id, { photoUrl });
+
+    if (!result.success) {
+      return error(result.message!, result.status);
+    }
+
+    return success(
+      {
+        message: "Photo uploaded successfully",
+        photoUrl,
+      },
+      200
+    );
+  } catch (e: any) {
+    return error(e.message ?? "Failed to upload photo", 500);
+  }
 }
-
-export const POST = withAuth(handlePOST);

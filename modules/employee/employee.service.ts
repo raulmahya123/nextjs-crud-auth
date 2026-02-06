@@ -134,5 +134,58 @@ static async delete(id: string): Promise<ServiceResponse<any>> {
     data: { message: "Employee deleted successfully" },
   };
 }
+static async bulkCreate(
+  rows: Array<{
+    name?: string;
+    email?: string;
+    position?: string;
+  }>
+): Promise<ServiceResponse<any>> {
+  let successCount = 0;
+  let failedCount = 0;
+  const errors: any[] = [];
+
+  for (const [index, row] of rows.entries()) {
+    const { name, email, position } = row;
+
+    if (!name || !email || !position) {
+      failedCount++;
+      errors.push({
+        row: index + 2,
+        message: "Missing required fields",
+      });
+      continue;
+    }
+
+    const exists = await EmployeeRepository.findByEmail(email);
+    if (exists) {
+      failedCount++;
+      errors.push({
+        row: index + 2,
+        message: "Email already exists",
+      });
+      continue;
+    }
+
+    await EmployeeRepository.create({
+      name,
+      email,
+      position,
+    });
+
+    successCount++;
+  }
+
+  return {
+    success: true,
+    status: 201,
+    data: {
+      total: rows.length,
+      success: successCount,
+      failed: failedCount,
+      errors,
+    },
+  };
+}
 
 }
