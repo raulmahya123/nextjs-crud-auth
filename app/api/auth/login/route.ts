@@ -1,29 +1,26 @@
-import { AuthService } from "@/modules/auth/auth.service";
-import { corsPreflight, withCors } from "@/app/lib/cors";
+import { AuthService } from "@/modules/auth/auth.service"
+import { success, failure } from "@/app/lib/response"
+import { handleCorsPreflight } from "@/app/lib/cors"
+import { LoginUserDTO } from "@/types/auth.dto"
 
+// =========================
+// PRE-FLIGHT
+// =========================
 export async function OPTIONS() {
-  return corsPreflight();
+  return handleCorsPreflight()
 }
 
+// =========================
+// LOGIN
+// =========================
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const body: LoginUserDTO = await req.json()
 
-  if (!email || !password) {
-    return withCors(
-      { message: "Email and password required" },
-      400
-    );
+  const result = await AuthService.login(body)
+
+  if (!result.ok) {
+    return failure(result.error, 401)
   }
 
-  const user = await AuthService.login(email, password);
-  if (!user) {
-    return withCors(
-      { message: "Invalid credentials" },
-      401
-    );
-  }
-
-  return withCors(
-    { success: true, data: user }
-  );
+  return success(result.data)
 }

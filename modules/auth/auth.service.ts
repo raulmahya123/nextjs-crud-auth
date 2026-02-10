@@ -1,89 +1,86 @@
-import bcrypt from "bcrypt";
-import { AuthRepository } from "./auth.repository";
-import { ServiceResponse } from "@/types/service-response";
-import { signToken } from "@/app/lib/jwt";
+import bcrypt from "bcrypt"
+import { AuthRepository } from "./auth.repository"
+import { ServiceResponse } from "@/types/service-response"
+import { signToken } from "@/app/lib/jwt"
+import {
+  RegisterUserDTO,
+  LoginUserDTO,
+} from "@/types/auth.dto"
 
 export class AuthService {
   static async register(
-    name: string,
-    email: string,
-    password: string
-  ): Promise<ServiceResponse<any>> {
+    data: RegisterUserDTO
+  ): Promise<
+    ServiceResponse<{
+      id: string
+      name: string
+      email: string
+    }>
+  > {
+    const { name, email, password } = data
+
     if (!name || !email || !password) {
-      return {
-        success: false,
-        status: 400,
-        message: "Name, email, and password are required",
-      };
+      return { ok: false, error: "INVALID_INPUT" }
     }
 
-    const exists = await AuthRepository.findByEmail(email);
+    const exists = await AuthRepository.findByEmail(email)
     if (exists) {
-      return {
-        success: false,
-        status: 409,
-        message: "Email already registered",
-      };
+      return { ok: false, error: "EMAIL_ALREADY_REGISTERED" }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10)
 
     const user = await AuthRepository.createUser({
       name,
       email,
       password: hashedPassword,
-    });
+    })
 
     return {
-      success: true,
-      status: 201,
+      ok: true,
       data: {
         id: user.id,
         name: user.name,
         email: user.email,
       },
-    };
+    }
   }
 
   static async login(
-    email: string,
-    password: string
-  ): Promise<ServiceResponse<any>> {
+    data: LoginUserDTO
+  ): Promise<
+    ServiceResponse<{
+      user: {
+        id: string
+        name: string
+        email: string
+      }
+      token: string
+    }>
+  > {
+    const { email, password } = data
+
     if (!email || !password) {
-      return {
-        success: false,
-        status: 400,
-        message: "Email and password are required",
-      };
+      return { ok: false, error: "INVALID_CREDENTIALS" }
     }
 
-    const user = await AuthRepository.findByEmail(email);
+    const user = await AuthRepository.findByEmail(email)
     if (!user) {
-      return {
-        success: false,
-        status: 401,
-        message: "Invalid credentials",
-      };
+      return { ok: false, error: "INVALID_CREDENTIALS" }
     }
 
-    const valid = await bcrypt.compare(password, user.password);
+    const valid = await bcrypt.compare(password, user.password)
     if (!valid) {
-      return {
-        success: false,
-        status: 401,
-        message: "Invalid credentials",
-      };
+      return { ok: false, error: "INVALID_CREDENTIALS" }
     }
 
-    // ✅ JWT PAYLOAD (MINIMAL & AMAN)
     const token = signToken({
-      sub: user.id,
+      userId: user.id,
       email: user.email,
-    });
+    })
 
     return {
-      success: true,
-      status: 200,
+      ok: true,
       data: {
         user: {
           id: user.id,
@@ -92,6 +89,6 @@ export class AuthService {
         },
         token,
       },
-    };
+    }
   }
 }

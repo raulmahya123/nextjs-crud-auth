@@ -1,38 +1,44 @@
-import { prisma } from "@/app/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { prisma } from "@/app/lib/prisma"
+import { Prisma, Employee } from "@prisma/client"
 
 export class EmployeeRepository {
-  static create(data: Prisma.EmployeeCreateInput) {
-    return prisma.employee.create({ data });
+  static async create(
+    data: Prisma.EmployeeCreateInput
+  ): Promise<Employee> {
+    return prisma.employee.create({ data })
   }
 
-  static findAll() {
-    return prisma.employee.findMany();
+  static async findAll(): Promise<Employee[]> {
+    return prisma.employee.findMany()
   }
 
-  static findById(id: string) {
+  static async findById(id: string): Promise<Employee | null> {
     return prisma.employee.findUnique({
       where: { id },
-    });
+    })
   }
 
-  // ✅ INI YANG KAMU PANGGIL DI SERVICE
-  static findByEmail(email: string) {
+  static async findByEmail(
+    email: string
+  ): Promise<Employee | null> {
     return prisma.employee.findUnique({
       where: { email },
-    });
+    })
   }
 
-  static update(id: string, data: Prisma.EmployeeUpdateInput) {
+  static async update(
+    id: string,
+    data: Prisma.EmployeeUpdateInput
+  ): Promise<Employee> {
     return prisma.employee.update({
       where: { id },
       data,
-    });
+    })
   }
 
-  static delete(id: string) {
+  static async delete(id: string): Promise<Employee> {
     return prisma.employee.delete({
       where: { id },
-    });
+    })
   }
 }

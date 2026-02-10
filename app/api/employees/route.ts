@@ -1,63 +1,39 @@
-import { EmployeeService } from "@/modules/employee/employee.service";
-import { corsPreflight, withCors } from "@/app/lib/cors";
+import { EmployeeService } from "@/modules/employee/employee.service"
+import { success, failure } from "@/app/lib/response"
+import { handleCorsPreflight } from "@/app/lib/cors"
+import { CreateEmployeeDTO } from "@/types/employee.dto"
 
 /**
- * PRE-FLIGHT (WAJIB)
+ * PRE-FLIGHT
  */
 export async function OPTIONS() {
-  return corsPreflight();
+  return handleCorsPreflight()
 }
 
 /**
  * GET ALL EMPLOYEES
  */
 export async function GET() {
-  try {
-    const result = await EmployeeService.getAll();
+  const result = await EmployeeService.getAll()
 
-    if (!result.success) {
-      return withCors(
-        { message: result.message },
-        result.status
-      );
-    }
-
-    return withCors(
-      { success: true, data: result.data },
-      result.status
-    );
-  } catch (e: any) {
-    return withCors(
-      { message: e.message ?? "Failed to fetch employees" },
-      400
-    );
+  if (!result.ok) {
+    return failure(result.error, 400)
   }
+
+  return success(result.data)
 }
 
 /**
  * CREATE EMPLOYEE
  */
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
+  const body: CreateEmployeeDTO = await req.json()
 
-    const result = await EmployeeService.create(body);
+  const result = await EmployeeService.create(body)
 
-    if (!result.success) {
-      return withCors(
-        { message: result.message },
-        result.status
-      );
-    }
-
-    return withCors(
-      { success: true, data: result.data },
-      result.status
-    );
-  } catch (e: any) {
-    return withCors(
-      { message: e.message ?? "Failed to create employee" },
-      400
-    );
+  if (!result.ok) {
+    return failure(result.error, 400)
   }
+
+  return success(result.data, 201)
 }

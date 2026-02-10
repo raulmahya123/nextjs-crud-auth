@@ -1,30 +1,31 @@
-import { NextResponse } from "next/server";
-import { verifyToken } from "./jwt";
+// lib/auth-middleware.ts
+import { verifyToken, AppJwtPayload } from "./jwt"
+import { failure } from "./response"
 
-export function withAuth(handler: Function) {
-  return async (req: Request, ...args: any[]) => {
-    try {
-      const authHeader = req.headers.get("authorization");
+type Handler = (
+  req: Request,
+  context?: any
+) => Promise<Response>
 
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return NextResponse.json(
-          { success: false, message: "Unauthorized" },
-          { status: 401 }
-        );
-      }
+export function withAuth(handler: Handler): Handler {
+  return async (req, context) => {
+    const authHeader = req.headers.get("authorization")
 
-      const token = authHeader.split(" ")[1];
-      const payload = verifyToken(token);
-
-      // inject user ke request (opsional)
-      (req as any).user = payload;
-
-      return handler(req, ...args);
-    } catch (err) {
-      return NextResponse.json(
-        { success: false, message: "Invalid or expired token" },
-        { status: 401 }
-      );
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return failure("Unauthorized", 401)
     }
-  };
+
+    const token = authHeader.split(" ")[1]
+
+    try {
+      const payload = verifyToken(token)
+
+      // inject user ke request (controlled & explicit)
+      ;(req as Request & { user: AppJwtPayload }).user = payload
+
+      return handler(req, context)
+    } catch {
+      return failure("Unauthorized", 401)
+    }
+  }
 }

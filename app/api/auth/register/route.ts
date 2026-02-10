@@ -1,28 +1,26 @@
-import { AuthService } from "@/modules/auth/auth.service";
-import { corsPreflight, withCors } from "@/app/lib/cors";
+import { AuthService } from "@/modules/auth/auth.service"
+import { success, failure } from "@/app/lib/response"
+import { handleCorsPreflight } from "@/app/lib/cors"
+import { RegisterUserDTO } from "@/types/auth.dto"
 
+// =========================
+// PRE-FLIGHT
+// =========================
 export async function OPTIONS() {
-  return corsPreflight();
+  return handleCorsPreflight()
 }
 
+// =========================
+// REGISTER
+// =========================
 export async function POST(req: Request) {
-  try {
-    const { name, email, password } = await req.json();
+  const body: RegisterUserDTO = await req.json()
 
-    const user = await AuthService.register(
-      name,
-      email,
-      password
-    );
+  const result = await AuthService.register(body)
 
-    return withCors(
-      { success: true, data: user },
-      201
-    );
-  } catch (e: any) {
-    return withCors(
-      { message: e.message },
-      400
-    );
+  if (!result.ok) {
+    return failure(result.error, 400)
   }
+
+  return success(result.data, 201)
 }

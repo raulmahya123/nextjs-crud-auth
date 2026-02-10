@@ -1,21 +1,25 @@
-import { NextResponse } from "next/server";
+// lib/cors.ts
+import { NextResponse } from "next/server"
+
+const ALLOWED_ORIGINS = (
+  process.env.CORS_ORIGINS ?? ""
+)
+  .split(",")
+  .map(o => o.trim())
+  .filter(Boolean)
 
 export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // ganti domain kalau production
+  "Access-Control-Allow-Origin": ALLOWED_ORIGINS.length
+    ? ALLOWED_ORIGINS.join(",")
+    : "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-export function corsPreflight() {
-  return NextResponse.json({}, { headers: corsHeaders });
+  "Access-Control-Allow-Credentials": "true",
 }
 
-export function withCors(
-  body: any,
-  status = 200
-) {
-  return NextResponse.json(body, {
-    status,
+export function handleCorsPreflight() {
+  return new NextResponse(null, {
+    status: 204,
     headers: corsHeaders,
-  });
+  })
 }

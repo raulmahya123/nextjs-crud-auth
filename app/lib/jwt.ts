@@ -1,17 +1,34 @@
-import jwt, { JwtPayload, Secret } from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken"
 
-const JWT_SECRET: Secret = process.env.JWT_SECRET as Secret;
-
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not defined");
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`${name} is not defined`)
+  }
+  return value
 }
 
-export function signToken(payload: object): string {
+const JWT_SECRET = requireEnv("JWT_SECRET")
+
+const JWT_EXPIRES_IN: jwt.SignOptions["expiresIn"] =
+  (process.env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"]) ?? "1d"
+
+export type AppJwtPayload = JwtPayload & {
+  userId: string
+  email?: string
+  role?: string
+}
+
+export function signToken(payload: AppJwtPayload): string {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "1d",
-  });
+    expiresIn: JWT_EXPIRES_IN,
+  })
 }
 
-export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+export function verifyToken(token: string): AppJwtPayload {
+  try {
+    return jwt.verify(token, JWT_SECRET) as AppJwtPayload
+  } catch {
+    throw new Error("INVALID_TOKEN")
+  }
 }

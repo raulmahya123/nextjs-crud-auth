@@ -1,11 +1,12 @@
-import { EmployeeService } from "@/modules/employee/employee.service";
-import { corsPreflight, withCors } from "@/app/lib/cors";
+import { EmployeeService } from "@/modules/employee/employee.service"
+import { success, failure } from "@/app/lib/response"
+import { handleCorsPreflight } from "@/app/lib/cors"
 
 // =========================
-// PRE-FLIGHT (WAJIB)
+// PRE-FLIGHT
 // =========================
 export async function OPTIONS() {
-  return corsPreflight();
+  return handleCorsPreflight()
 }
 
 // =========================
@@ -13,29 +14,17 @@ export async function OPTIONS() {
 // =========================
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  try {
-    const { id } = await context.params;
+  const { id } = context.params
 
-    const employee = await EmployeeService.getById(id);
-    if (!employee) {
-      return withCors(
-        { message: "Employee not found" },
-        404
-      );
-    }
+  const result = await EmployeeService.getById(id)
 
-    return withCors(
-      { success: true, data: employee },
-      200
-    );
-  } catch (e: any) {
-    return withCors(
-      { message: e.message ?? "Failed to fetch employee" },
-      400
-    );
+  if (!result.ok) {
+    return failure(result.error, 404)
   }
+
+  return success(result.data)
 }
 
 // =========================
@@ -43,24 +32,18 @@ export async function GET(
 // =========================
 export async function PUT(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  try {
-    const { id } = await context.params;
-    const body = await req.json();
+  const { id } = context.params
+  const body = await req.json()
 
-    const employee = await EmployeeService.update(id, body);
+  const result = await EmployeeService.update(id, body)
 
-    return withCors(
-      { success: true, data: employee },
-      200
-    );
-  } catch (e: any) {
-    return withCors(
-      { message: e.message ?? "Failed to update employee" },
-      400
-    );
+  if (!result.ok) {
+    return failure(result.error, 400)
   }
+
+  return success(result.data)
 }
 
 // =========================
@@ -68,28 +51,15 @@ export async function PUT(
 // =========================
 export async function DELETE(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  try {
-    const { id } = await context.params;
+  const { id } = context.params
 
-    const result = await EmployeeService.delete(id);
+  const result = await EmployeeService.delete(id)
 
-    if (!result.success) {
-      return withCors(
-        { message: result.message },
-        result.status
-      );
-    }
-
-    return withCors(
-      { success: true, data: result.data },
-      result.status
-    );
-  } catch (e: any) {
-    return withCors(
-      { message: e.message ?? "Failed to delete employee" },
-      400
-    );
+  if (!result.ok) {
+    return failure(result.error, 400)
   }
+
+  return success(result.data)
 }

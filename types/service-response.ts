@@ -1,6 +1,3 @@
-export interface ServiceResponse<T> {
-  success: boolean;
-  status: number;
-  message?: string;
-  data?: T;
-}
+export type ServiceResponse<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string }

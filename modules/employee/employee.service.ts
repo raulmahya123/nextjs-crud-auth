@@ -1,191 +1,138 @@
-import { EmployeeRepository } from "./employee.repository";
-import { ServiceResponse } from "@/types/service-response";
-
-export interface CreateEmployeeDTO {
-  name: string;
-  email: string;
-  position: string;
-  photoUrl?: string;
-}
-
-export interface UpdateEmployeeDTO {
-  name?: string;
-  email?: string;
-  position?: string;
-  photoUrl?: string;
-}
+import { Employee } from "@prisma/client"
+import { EmployeeRepository } from "./employee.repository"
+import { ServiceResponse } from "@/types/service-response"
+import {
+  CreateEmployeeDTO,
+  UpdateEmployeeDTO,
+} from "@/types/employee.dto"
 
 export class EmployeeService {
   static async create(
     data: CreateEmployeeDTO
-  ): Promise<ServiceResponse<any>> {
-    const { name, email, position } = data;
+  ): Promise<ServiceResponse<Employee>> {
+    const { name, email, position } = data
 
     if (!name || !email || !position) {
-      return {
-        success: false,
-        status: 400,
-        message: "Name, email, and position are required",
-      };
+      return { ok: false, error: "INVALID_INPUT" }
     }
 
-    const exists = await EmployeeRepository.findByEmail(email);
+    const exists = await EmployeeRepository.findByEmail(email)
     if (exists) {
-      return {
-        success: false,
-        status: 409,
-        message: "Employee with this email already exists",
-      };
+      return { ok: false, error: "EMPLOYEE_ALREADY_EXISTS" }
     }
 
-    const employee = await EmployeeRepository.create(data);
-
-    return {
-      success: true,
-      status: 201,
-      data: employee,
-    };
+    const employee = await EmployeeRepository.create(data)
+    return { ok: true, data: employee }
   }
 
-  static async getAll(): Promise<ServiceResponse<any>> {
-    return {
-      success: true,
-      status: 200,
-      data: await EmployeeRepository.findAll(),
-    };
+  static async getAll(): Promise<ServiceResponse<Employee[]>> {
+    const employees = await EmployeeRepository.findAll()
+    return { ok: true, data: employees }
   }
 
-  static async getById(id: string): Promise<ServiceResponse<any>> {
+  static async getById(
+    id: string
+  ): Promise<ServiceResponse<Employee>> {
     if (!id) {
-      return {
-        success: false,
-        status: 400,
-        message: "Employee id is required",
-      };
+      return { ok: false, error: "INVALID_ID" }
     }
 
-    const employee = await EmployeeRepository.findById(id);
+    const employee = await EmployeeRepository.findById(id)
     if (!employee) {
-      return {
-        success: false,
-        status: 404,
-        message: "Employee not found",
-      };
+      return { ok: false, error: "EMPLOYEE_NOT_FOUND" }
     }
 
-    return {
-      success: true,
-      status: 200,
-      data: employee,
-    };
+    return { ok: true, data: employee }
   }
 
   static async update(
     id: string,
     data: UpdateEmployeeDTO
-  ): Promise<ServiceResponse<any>> {
+  ): Promise<ServiceResponse<Employee>> {
     if (!id) {
-      return {
-        success: false,
-        status: 400,
-        message: "Employee id is required",
-      };
+      return { ok: false, error: "INVALID_ID" }
     }
 
     if (Object.keys(data).length === 0) {
-      return {
-        success: false,
-        status: 400,
-        message: "No data provided to update",
-      };
+      return { ok: false, error: "NO_UPDATE_DATA" }
+    }
+
+    const employee = await EmployeeRepository.update(id, data)
+    return { ok: true, data: employee }
+  }
+
+  static async delete(
+    id: string
+  ): Promise<ServiceResponse<{ message: string }>> {
+    if (!id) {
+      return { ok: false, error: "INVALID_ID" }
+    }
+
+    const exists = await EmployeeRepository.findById(id)
+    if (!exists) {
+      return { ok: false, error: "EMPLOYEE_NOT_FOUND" }
+    }
+
+    await EmployeeRepository.delete(id)
+
+    return {
+      ok: true,
+      data: { message: "Employee deleted successfully" },
+    }
+  }
+
+  static async bulkCreate(
+    rows: Array<{
+      name?: string
+      email?: string
+      position?: string
+    }>
+  ): Promise<
+    ServiceResponse<{
+      total: number
+      success: number
+      failed: number
+      errors: Array<{ row: number; error: string }>
+    }>
+  > {
+    let successCount = 0
+    let failedCount = 0
+    const errors: Array<{ row: number; error: string }> = []
+
+    for (const [index, row] of rows.entries()) {
+      const { name, email, position } = row
+
+      if (!name || !email || !position) {
+        failedCount++
+        errors.push({
+          row: index + 2,
+          error: "INVALID_ROW_DATA",
+        })
+        continue
+      }
+
+      const exists = await EmployeeRepository.findByEmail(email)
+      if (exists) {
+        failedCount++
+        errors.push({
+          row: index + 2,
+          error: "EMAIL_ALREADY_EXISTS",
+        })
+        continue
+      }
+
+      await EmployeeRepository.create({ name, email, position })
+      successCount++
     }
 
     return {
-      success: true,
-      status: 200,
-      data: await EmployeeRepository.update(id, data),
-    };
-  }
-
-static async delete(id: string): Promise<ServiceResponse<any>> {
-  if (!id) {
-    return {
-      success: false,
-      status: 400,
-      message: "Employee id is required",
-    };
-  }
-
-  // ✅ CEK DULU ADA ATAU TIDAK
-  const exists = await EmployeeRepository.findById(id);
-  if (!exists) {
-    return {
-      success: false,
-      status: 404,
-      message: "Employee not found",
-    };
-  }
-
-  await EmployeeRepository.delete(id);
-
-  return {
-    success: true,
-    status: 200,
-    data: { message: "Employee deleted successfully" },
-  };
-}
-static async bulkCreate(
-  rows: Array<{
-    name?: string;
-    email?: string;
-    position?: string;
-  }>
-): Promise<ServiceResponse<any>> {
-  let successCount = 0;
-  let failedCount = 0;
-  const errors: any[] = [];
-
-  for (const [index, row] of rows.entries()) {
-    const { name, email, position } = row;
-
-    if (!name || !email || !position) {
-      failedCount++;
-      errors.push({
-        row: index + 2,
-        message: "Missing required fields",
-      });
-      continue;
+      ok: true,
+      data: {
+        total: rows.length,
+        success: successCount,
+        failed: failedCount,
+        errors,
+      },
     }
-
-    const exists = await EmployeeRepository.findByEmail(email);
-    if (exists) {
-      failedCount++;
-      errors.push({
-        row: index + 2,
-        message: "Email already exists",
-      });
-      continue;
-    }
-
-    await EmployeeRepository.create({
-      name,
-      email,
-      position,
-    });
-
-    successCount++;
   }
-
-  return {
-    success: true,
-    status: 201,
-    data: {
-      total: rows.length,
-      success: successCount,
-      failed: failedCount,
-      errors,
-    },
-  };
-}
-
 }

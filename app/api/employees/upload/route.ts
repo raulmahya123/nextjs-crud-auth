@@ -1,13 +1,14 @@
-import { EmployeeService } from "@/modules/employee/employee.service";
-import { corsPreflight, withCors } from "@/app/lib/cors";
-import { writeFile } from "fs/promises";
-import path from "path";
+import { EmployeeService } from "@/modules/employee/employee.service"
+import { success, failure } from "@/app/lib/response"
+import { handleCorsPreflight } from "@/app/lib/cors"
+import { writeFile } from "fs/promises"
+import path from "path"
 
 // =========================
-// PRE-FLIGHT (WAJIB)
+// PRE-FLIGHT
 // =========================
 export async function OPTIONS() {
-  return corsPreflight();
+  return handleCorsPreflight()
 }
 
 // =========================
@@ -15,65 +16,51 @@ export async function OPTIONS() {
 // =========================
 export async function POST(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  try {
-    const { id } = await context.params;
+  const { id } = context.params
 
-    const formData = await req.formData();
-    const file = formData.get("photo") as File | null;
+  // ambil form data
+  const formData = await req.formData()
+  const file = formData.get("photo") as File | null
 
-    if (!file) {
-      return withCors(
-        { message: "Photo is required" },
-        400
-      );
-    }
-
-    // ✅ VALIDASI FILE
-    if (!file.type.startsWith("image/")) {
-      return withCors(
-        { message: "Only image files are allowed" },
-        400
-      );
-    }
-
-    // ✅ BUFFER FILE
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // ✅ NAMA FILE UNIK
-    const fileName = `${id}-${Date.now()}-${file.name}`;
-    const uploadDir = path.join(
-      process.cwd(),
-      "public/uploads/employees"
-    );
-    const filePath = path.join(uploadDir, fileName);
-
-    await writeFile(filePath, buffer);
-
-    // ✅ SIMPAN URL KE DB
-    const photoUrl = `/uploads/employees/${fileName}`;
-    const result = await EmployeeService.update(id, { photoUrl });
-
-    if (!result.success) {
-      return withCors(
-        { message: result.message },
-        result.status
-      );
-    }
-
-    return withCors(
-      {
-        message: "Photo uploaded successfully",
-        photoUrl,
-      },
-      200
-    );
-  } catch (e: any) {
-    return withCors(
-      { message: e.message ?? "Failed to upload photo" },
-      500
-    );
+  // validasi file ada
+  if (!file) {
+    return failure("Photo is required", 400)
   }
+
+  // validasi tipe file
+  if (!file.type.startsWith("image/")) {
+    return failure("Only image files are allowed", 400)
+  }
+
+  // convert file ke buffer
+  const buffer = Buffer.from(await file.arrayBuffer())
+
+  // generate nama file unik
+  const fileName = `${id}-${Date.now()}-${file.name}`
+  const uploadDir = path.join(
+    process.cwd(),
+    "public/uploads/employees"
+  )
+  const filePath = path.join(uploadDir, fileName)
+
+  // simpan file
+  await writeFile(filePath, buffer)
+
+  // simpan URL ke database
+  const photoUrl = `/uploads/employees/${fileName}`
+  const result = await EmployeeService.update(id, { photoUrl })
+
+  if (!result.ok) {
+    return failure(result.error, 400)
+  }
+
+  return success(
+    {
+      message: "Photo uploaded successfully",
+      photoUrl,
+    },
+    200
+  )
 }
