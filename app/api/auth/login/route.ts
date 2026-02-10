@@ -1,17 +1,29 @@
 import { AuthService } from "@/modules/auth/auth.service";
-import { error, success } from "@/app/lib/response";
+import { corsPreflight, withCors } from "@/app/lib/cors";
+
+export async function OPTIONS() {
+  return corsPreflight();
+}
 
 export async function POST(req: Request) {
   const { email, password } = await req.json();
 
   if (!email || !password) {
-    return error("Email and password required", 400);
+    return withCors(
+      { message: "Email and password required" },
+      400
+    );
   }
 
   const user = await AuthService.login(email, password);
   if (!user) {
-    return error("Invalid credentials", 401);
+    return withCors(
+      { message: "Invalid credentials" },
+      401
+    );
   }
 
-  return success(user);
+  return withCors(
+    { success: true, data: user }
+  );
 }

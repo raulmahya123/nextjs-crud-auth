@@ -1,5 +1,12 @@
 import { EmployeeService } from "@/modules/employee/employee.service";
-import { success, error } from "@/app/lib/response";
+import { corsPreflight, withCors } from "@/app/lib/cors";
+
+/**
+ * PRE-FLIGHT (WAJIB)
+ */
+export async function OPTIONS() {
+  return corsPreflight();
+}
 
 /**
  * GET ALL EMPLOYEES
@@ -9,12 +16,21 @@ export async function GET() {
     const result = await EmployeeService.getAll();
 
     if (!result.success) {
-      return error(result.message!, result.status);
+      return withCors(
+        { message: result.message },
+        result.status
+      );
     }
 
-    return success(result.data, result.status);
+    return withCors(
+      { success: true, data: result.data },
+      result.status
+    );
   } catch (e: any) {
-    return error(e.message ?? "Failed to fetch employees", 400);
+    return withCors(
+      { message: e.message ?? "Failed to fetch employees" },
+      400
+    );
   }
 }
 
@@ -28,11 +44,20 @@ export async function POST(req: Request) {
     const result = await EmployeeService.create(body);
 
     if (!result.success) {
-      return error(result.message!, result.status);
+      return withCors(
+        { message: result.message },
+        result.status
+      );
     }
 
-    return success(result.data, result.status);
+    return withCors(
+      { success: true, data: result.data },
+      result.status
+    );
   } catch (e: any) {
-    return error(e.message ?? "Failed to create employee", 400);
+    return withCors(
+      { message: e.message ?? "Failed to create employee" },
+      400
+    );
   }
 }

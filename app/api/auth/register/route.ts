@@ -1,5 +1,9 @@
 import { AuthService } from "@/modules/auth/auth.service";
-import { success, error } from "@/app/lib/response";
+import { corsPreflight, withCors } from "@/app/lib/cors";
+
+export async function OPTIONS() {
+  return corsPreflight();
+}
 
 export async function POST(req: Request) {
   try {
@@ -11,8 +15,14 @@ export async function POST(req: Request) {
       password
     );
 
-    return success(user, 201);
+    return withCors(
+      { success: true, data: user },
+      201
+    );
   } catch (e: any) {
-    return error(e.message, 400);
+    return withCors(
+      { message: e.message },
+      400
+    );
   }
 }

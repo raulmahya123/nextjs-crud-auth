@@ -1,6 +1,16 @@
 import { EmployeeService } from "@/modules/employee/employee.service";
-import { success, error } from "@/app/lib/response";
+import { corsPreflight, withCors } from "@/app/lib/cors";
 
+// =========================
+// PRE-FLIGHT (WAJIB)
+// =========================
+export async function OPTIONS() {
+  return corsPreflight();
+}
+
+// =========================
+// GET BY ID
+// =========================
 export async function GET(
   _req: Request,
   context: { params: Promise<{ id: string }> }
@@ -10,15 +20,27 @@ export async function GET(
 
     const employee = await EmployeeService.getById(id);
     if (!employee) {
-      return error("Employee not found", 404);
+      return withCors(
+        { message: "Employee not found" },
+        404
+      );
     }
 
-    return success(employee, 200);
+    return withCors(
+      { success: true, data: employee },
+      200
+    );
   } catch (e: any) {
-    return error(e.message ?? "Failed to fetch employee", 400);
+    return withCors(
+      { message: e.message ?? "Failed to fetch employee" },
+      400
+    );
   }
 }
 
+// =========================
+// UPDATE
+// =========================
 export async function PUT(
   req: Request,
   context: { params: Promise<{ id: string }> }
@@ -28,12 +50,22 @@ export async function PUT(
     const body = await req.json();
 
     const employee = await EmployeeService.update(id, body);
-    return success(employee, 200);
+
+    return withCors(
+      { success: true, data: employee },
+      200
+    );
   } catch (e: any) {
-    return error(e.message ?? "Failed to update employee", 400);
+    return withCors(
+      { message: e.message ?? "Failed to update employee" },
+      400
+    );
   }
 }
 
+// =========================
+// DELETE
+// =========================
 export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> }
@@ -44,11 +76,20 @@ export async function DELETE(
     const result = await EmployeeService.delete(id);
 
     if (!result.success) {
-      return error(result.message!, result.status);
+      return withCors(
+        { message: result.message },
+        result.status
+      );
     }
 
-    return success(result.data, result.status);
+    return withCors(
+      { success: true, data: result.data },
+      result.status
+    );
   } catch (e: any) {
-    return error(e.message ?? "Failed to delete employee", 400);
+    return withCors(
+      { message: e.message ?? "Failed to delete employee" },
+      400
+    );
   }
 }
